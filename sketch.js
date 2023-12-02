@@ -1,3 +1,4 @@
+// necessary global variables for controling the game state outside of classes and functions
 let play;
 let camX;
 let camY;
@@ -42,7 +43,13 @@ let index = 0;
 let coinFrame = 0;
 let coinIndex = 10;
 let start = true;
+let rotation = 0;
 
+// class for the chest object
+// INPUT: the x and y position of the chest,
+// the special item the chest drops if it has a special item
+// the map the chest is spawned on,
+// the direction the chest is facing, decided by the map it is spawned on
 class chestObj
 {
   constructor(x, y, item, inputMap, orientation)
@@ -55,6 +62,10 @@ class chestObj
     this.opended = false;
     this.orientation = orientation;
   }
+  // drawing the chest as well as the open prompt
+  // if opened we spawn a random number of coins, 
+  // a random number of health packs but a health pack is guranteed if the player
+  // health is below 20
   draw()
   {
     
@@ -124,6 +135,9 @@ class chestObj
     }
   }
 }
+// draws the scooba object that allows the player dive
+// similar logic to the coin object but sets the players
+// swim state to true
 class scoobaObj
 {
   constructor(x, y, tileMap)
@@ -186,6 +200,9 @@ class scoobaObj
     image(Scooba[this.frameCount], this.position.x, this.position.y + 5, (0.7 * tileWidth), -(0.7 * tileHeight));
   }
 }
+// draws the scooba object that allows the player dive
+// similar logic to the coin object but sets the players
+// double jump state to true
 class shoeObj
 {
   constructor(x, y, tileMap)
@@ -249,6 +266,8 @@ class shoeObj
   }
 }
 
+// tile map object, this contains the tilemap json
+// the tilemaps spaw position
 class tileMapObj
 {
   constructor(x, y, inputMap)
@@ -257,12 +276,10 @@ class tileMapObj
     this.mapData = loadJSON(inputMap);
     this.input = inputMap;
   }
-  getMap()
-  {
-    return this.mapData;
-  }
 }
 
+// health pack object, similar to coin object but increments
+// the players health when picked up
 class healthObj
 {
   constructor(x, y, tileMap)
@@ -330,6 +347,7 @@ class healthObj
   }
 }
 
+// boss object, inputs are just the tilemap
 class bossObj
 {
   constructor(tileMap)
@@ -348,6 +366,8 @@ class bossObj
     this.state = 0;
     this.exploding = true;
   }
+  // state one the bullet spray, the boss spawns 6
+  // bullets every 15 frames 
   state01()
   {
     if(frameCount % 15 == 0)
@@ -368,6 +388,8 @@ class bossObj
       this.timer = millis();
     }
   }
+  // attack state 2, the boss spawns collision walls starting
+  // on the right side of the screen and washes over the entire screen
   state02()
   {
     let y = this.startPosition.y - 100;
@@ -384,6 +406,8 @@ class bossObj
     image(BossAttack01[this.attack01Frame], this.x + this.screenWash - 1000 - 100, y, 400, 500);
     hitBox(this.x + this.screenWash - 1000, y + 50, 110, 430);
   }
+  // attack state 2, the boss spawns collision walls starting
+  // on the left side of the screen and washes over the entire screen
   state03()
   {
     let y = this.startPosition.y - 200;
@@ -399,6 +423,7 @@ class bossObj
       this.screenWash = 1400;
     }
   }
+  // logic that moves the player between states
   update()
   {
     if(millis() - this.timer > 400 && this.state === 0)
@@ -418,7 +443,7 @@ class bossObj
     {
       this.state03();
     }
-    
+    // collision check for the players bullets
     for(let bullet of playerBullets)
     {
       if (dist(bullet.position.x, bullet.position.y, this.position.x + 250, this.position.y - 250) < 150)
@@ -427,8 +452,10 @@ class bossObj
         bullet.delete = true;
       }
     }
+    // creates a hitbox for the boss
     hitBox(this.position.x + 190, this.position.y - 400, 150, 250);
   }
+  // draws the bosses health on the screen
   drawHealth()
   {
     fill(70);
@@ -442,6 +469,7 @@ class bossObj
     }
     image(BossHead[0], 2 * tileWidth, 16.75 * tileWidth, 3 * tileWidth, 3 * tileWidth);
   }
+  // draws the bosses animations
   draw()
   {
     if(this.health > 0)
@@ -483,6 +511,7 @@ class bossObj
         this.inRange = false;
       }
     }
+    // when the boss is kill particles are spawned to indicate his death
     else if (this.exploding)
     {
       let x = this.position.x + 260;
@@ -500,6 +529,7 @@ class bossObj
   }
     
 }
+// retuns the sign of a number
 function signValue(number) {
   if (number > 0) {
     return 1;
@@ -507,6 +537,9 @@ function signValue(number) {
     return -1;
   }
 }
+// coin class
+// INPUT: the x position of the coin, the y position and the map the coin
+// was spawned in
 class coinObj
 {
   constructor(x, y, tileMap)
@@ -519,12 +552,14 @@ class coinObj
     this.delete = false;
     this.frameCount = 0;
   }
+  // applies force to the coin
   jump(force)
   {
     this.velocity.add(force);
   }
   update()
   {
+    // check sif the coin has collided with the ground, if so we set the velocity to zero
     this.position.add(this.velocity);
     let tileY1 = floor((this.position.y - this.mapPosition.y + 5) / tileWidth);
     let tileX = floor((this.position.x - this.mapPosition.x) / tileWidth);
@@ -541,16 +576,20 @@ class coinObj
         }
       }
     }
-
+    // checks if the player collided with the coin, if so the coin is deleted
+    // and the players score is incremented
     if(dist(this.position.x, this.position.y, player.position.x, player.position.y) < 8)
     {
       this.delete = true;
       player.score += 10;
     }
+    // timer set at the begining of creating the coin,
+    // if this timer expires we delete the coin
     if(millis() - this.timer >= 10000)
     {
       this.delete = true;
     }
+    // loops through each frame of the coins animations every 5th frame cycle
     if(frameCount % 5 === 0)
     {
       if(this.frameCount < 7)
@@ -563,18 +602,19 @@ class coinObj
       }
     }
   }
+  // draws the coin depending on which frame cycle we are on
   draw()
   {
     image(Coin[this.frameCount], this.position.x, this.position.y, (0.5 * tileWidth), -(0.5 * tileHeight));
   }
 }
 
+// creates a particle explosion effect when called
+// learned this in class
 class particleObj
 {
   constructor(x, y) {
     this.position = new p5.Vector(x, y);
-    //this.velocity = new p5.Vector(random(-0.5, 0.5), random(-0.5, 0.5));
-    // cartesian
     this.velocity = new p5.Vector(random(0, TWO_PI), random(-0.5, 0.5));
     this.size = random(1, 10);
     this.c1 = random(155, 255);
@@ -585,7 +625,6 @@ class particleObj
     var v = new p5.Vector(this.velocity.y*cos(this.velocity.x),
     this.velocity.y*sin(this.velocity.x));
     this.position.add(v);
-    //this.position.add(this.velocity); // cartesian
     this.timeLeft--;
   }
   draw() {
@@ -594,8 +633,10 @@ class particleObj
     ellipse(this.position.x, this.position.y, this.size, this.size);
   }
 }
-let rotation = 0;
 
+
+// sets up the players start position, the boss's position,
+// the relative camera position and the play state.
 function playerSetup()
 {
   timer = millis();
@@ -607,16 +648,20 @@ function playerSetup()
 }
 
 function setup() {
+  // sets the text size
   textSize(32);
+  // removes the default cursor image
   noCursor();
-  //LoadMaps();
+  // removes the stroke
   noStroke();
+  // calls the setup function
   playerSetup();
-  // levels being imported
-  //let gravitySize = 0.015 * tileWidth;
+  // sets gravity
   gravity = createVector(0, 0.015 * tileWidth);
   const canvas = createCanvas(40 * tileWidth, 20 * tileHeight);
   canvas.elt.addEventListener("contextmenu", (e) => e.preventDefault());
+  // dictionary containing the tiles and their corresponding character values in
+  // the json's of each map
   selection = {'a':Background,
     'b':GrassSuspendedEdge,
     'c':GrassCorner,
@@ -698,7 +743,8 @@ function setup() {
     swimBlocks = ['+'];
 }
 
-//let Background;
+// global variables for all of our tiles
+let Background;
 let GrassSuspendedEdge;
 let GrassCorner;
 let GrassWall01;
@@ -802,7 +848,7 @@ let InteractButton;
 let BaseBackground;
 let InstructionsPage;
 
-
+// preloads all our tiles into global variables
 function preload()
 {
   Background = loadImage('TileMap/Background.png');
@@ -889,26 +935,25 @@ function preload()
   Title = loadImage('Instructions/Title.png');
   InstructionsPage = loadImage('Instructions/InstructionsPage.png');
   GameOver = loadImage('Instructions/GameOver.png');
-
-  for (let i = 0; i <= 7; i++)
-  {
-    enemyWalkCycle[i] = loadImage('Enemies/Bug/walk/enemyWalkCycle0' + i.toString() +'.png');
-    enemyIdleCycle[i] = loadImage('Enemies/Bug/Idle/Idle0' + i.toString() +'.png');
-    Coin[i] = loadImage('Coins/Coin0' + i.toString() + '.png');
-    Health[i] = loadImage('Health/Health0' + i.toString() + '.png');
-    Boots[i] = loadImage('Boots/Boots0' + i.toString() + '.png');
-  }
-  for(let i = 0; i <= 5; i++)
-  {
-    if(i + 1 < 5)
-    {
-      enemyBatFlyCycle[i] = loadImage('Enemies/Bat/Fly0' + (i + 1).toString() +'.png');
-    }
-    enemyBatAttackCycle[i] = loadImage('Enemies/Bat/Attack0' + (i + 1).toString() +'.png');
-  }
   enemyBatSleep = loadImage('Enemies/Bat/Sleep.png');
   for(let i = 0; i <= 10; i++)
   {
+    if (i <= 7)
+    {
+      enemyWalkCycle[i] = loadImage('Enemies/Bug/walk/enemyWalkCycle0' + i.toString() +'.png');
+      enemyIdleCycle[i] = loadImage('Enemies/Bug/Idle/Idle0' + i.toString() +'.png');
+      Coin[i] = loadImage('Coins/Coin0' + i.toString() + '.png');
+      Health[i] = loadImage('Health/Health0' + i.toString() + '.png');
+      Boots[i] = loadImage('Boots/Boots0' + i.toString() + '.png');
+    }
+    if(i <= 5)
+    {
+      if(i + 1 < 5)
+      {
+        enemyBatFlyCycle[i] = loadImage('Enemies/Bat/Fly0' + (i + 1).toString() +'.png');
+      }
+      enemyBatAttackCycle[i] = loadImage('Enemies/Bat/Attack0' + (i + 1).toString() +'.png');
+    }
     if(i < 5)
     {
       BossAttack01[i] = loadImage('BossAttack01/BossAttack0' + i.toString() + '.png');
@@ -942,6 +987,8 @@ function preload()
   LoadMaps();
 }
 
+// loads our json maps into variables and adds those variables
+// to an array that we index to draw the maps
 function LoadMaps()
 {
   Base = new tileMapObj(0, 0, 'Levels/BaseTiled.json');
@@ -957,6 +1004,8 @@ function LoadMaps()
   maps = [Base, Right01, Right02, Right03, Down01, Down02, Down03, Left01, Left02, Left03];
 }
 
+// mine class
+// Inputs: x position, y position and rotation
 class mineObj
 {
   constructor(x, y, rotation)
@@ -967,6 +1016,8 @@ class mineObj
   }
   draw()
   {
+    // spawns several particals and decrements the players
+    // health if the player collides with the mine.
     if(dist(this.position.x + tileWidth, this.position.y + tileWidth, player.position.x, player.position.y) < 30)
     {
       for(let i = 0; i < 15; i++)
@@ -987,6 +1038,7 @@ class mineObj
     {
       push();
       translate(this.position.x + 25, this.position.y + 25);
+      // rotates the mine by pi depending on the position it was spawned in
       if(this.rotation === -1)
       {
         rotate(PI);
@@ -1002,30 +1054,35 @@ class mineObj
 }
 
 
-
+// enemy class
+// INPUTS: x position, y position and the tilemap that spawned him
 class enemyObj
 {
   constructor(x, y, tileMap)
   {
-    this.position = createVector(x, y);
-    this.startPosition = createVector(x, y);
-    this.velocity = createVector();
+    this.mapObj = tileMap;
     this.map = tileMap.mapData;
     this.mapPosition = tileMap.position;
-    this.maxSpeed = 8;
+
+    this.velocity = createVector();
+    this.position = createVector(x, y);
+    this.startPosition = createVector(x, y);
+    
     this.speed = tileWidth/10;
     this.angle = 0;
     this.radius = 80;
-    this.angleRange = 45;
-    this.direction = -1;
+    this.health = 100;
+    this.maxSpeed = 8;
     this.idleFlip = 1; 
+    this.frameCount = 0;
+    this.direction = -1;
+    this.angleRange = 45;
     this.pauseCycles = 0;
     this.maxPauseCycles = 100;
-    this.frameCount = 0;
-    this.health = 100;
+    
     this.delete = false;
-    this.mapObj = tileMap;
   }
+  // applies vector forces to the players velocity
   jump(force)
   {
     this.velocity.add(force);
@@ -1033,74 +1090,72 @@ class enemyObj
   }
   update()
   {
-    
-  this.position.add(this.velocity);
-  if (!backGroundTiles.includes(this.map[floor((this.position.x + (1.25 * tileWidth) - this.mapPosition.x) / tileWidth)][floor((this.position.y - (0.1 * tileWidth) - this.mapPosition.y)/ tileHeight)][0])) {
-    this.direction = -1;
-  }
-  
-  else if (!backGroundTiles.includes(this.map[floor((abs(this.position.x - (1.25 * tileWidth) - this.mapPosition.x)) / tileWidth)][floor((this.position.y - (0.1 * tileWidth) - this.mapPosition.y)/ tileHeight)][0])) {
-    this.direction = 1;
-  }
-  let tileY1 = floor((this.position.y - this.mapPosition.y + (0.25 * tileWidth)) / tileWidth);
-  let tileX = floor((this.position.x - this.mapPosition.x) / tileWidth);
-  if (tileY1 > 0 && tileY1 < 50 && tileX > 0 && tileX < 50) {
-    let value = this.map[tileX][tileY1][0];
-    if (backGroundTiles.includes(value)) {
-      this.jump(gravity);
+    // updates the enemies position based on the velocity increments
+    // applied to the enemy
+    this.position.add(this.velocity);
+    // checks if the enemy can move right by referencing the tilemap
+    if (!backGroundTiles.includes(this.map[floor((this.position.x + (1.25 * tileWidth) - this.mapPosition.x) / tileWidth)][floor((this.position.y - (0.1 * tileWidth) - this.mapPosition.y)/ tileHeight)][0])) {
+      this.direction = -1;
     }
-    else{
-      this.velocity.y = 0;
-      this.position.y = tileY1 * tileWidth + ( this.mapPosition.y - maps[0].position.y);
+    // checks if the enemy can move left based on the tilemap
+    else if (!backGroundTiles.includes(this.map[floor((abs(this.position.x - (1.25 * tileWidth) - this.mapPosition.x)) / tileWidth)][floor((this.position.y - (0.1 * tileWidth) - this.mapPosition.y)/ tileHeight)][0])) {
+      this.direction = 1;
     }
-    let cornersBelowLeft = this.map[tileX - 1][tileY1][0];
-    let cornersBelowRight = this.map[tileX + 1][tileY1][0];
-    if(backGroundTiles.includes(cornersBelowLeft) || backGroundTiles.includes(cornersBelowRight))
-    {
-      this.direction *= -1;
-    } 
-  }
-  for (let i = playerBullets.length - 1; i >= 0; i--) {
-    const playerBullet = playerBullets[i];
-    if(dist(this.position.x, this.position.y, playerBullet.position.x, playerBullet.position.y) < 0.75 * tileWidth)
-    {
-      if(this.health > 0)
+    // creates the enemies collision points as variables
+    let tileY1 = floor((this.position.y - this.mapPosition.y + (0.25 * tileWidth)) / tileWidth);
+    let tileX = floor((this.position.x - this.mapPosition.x) / tileWidth);
+    // checks if the enemy has collided with the ground, if so it stops falling
+    if (tileY1 > 0 && tileY1 < 50 && tileX > 0 && tileX < 50) {
+      let value = this.map[tileX][tileY1][0];
+      if (backGroundTiles.includes(value)) {
+        this.jump(gravity);
+      }
+      else{
+        this.velocity.y = 0;
+        this.position.y = tileY1 * tileWidth + ( this.mapPosition.y - maps[0].position.y);
+      }
+      // creates corner below variables for enemies on platforms
+      // flips their direction if there is no ground infront of them
+      let cornersBelowLeft = this.map[tileX - 1][tileY1][0];
+      let cornersBelowRight = this.map[tileX + 1][tileY1][0];
+      if(backGroundTiles.includes(cornersBelowLeft) || backGroundTiles.includes(cornersBelowRight))
       {
-        this.health -= 20;
-        playerBullets.splice(i, 1);
+        this.direction *= -1;
+      } 
+    }
+    // decrements the enemies health if they collide with the players bullets
+    for (let i = playerBullets.length - 1; i >= 0; i--) {
+      const playerBullet = playerBullets[i];
+      if(dist(this.position.x, this.position.y, playerBullet.position.x, playerBullet.position.y) < 0.75 * tileWidth)
+      {
+        if(this.health > 0)
+        {
+          this.health -= 20;
+          playerBullets.splice(i, 1);
+        }
       }
     }
-  }
-
-  this.position.x += this.speed / 2 * this.direction;
-
-  if(this.health <= 0)
-  {
-    this.delete = true;
-  }
+    // moves the enemies position based on its direction and speed
+    this.position.x += this.speed / 2 * this.direction;
+    // if the enemies health is below zero we delete the enemy
+    if(this.health <= 0)
+    {
+      this.delete = true;
+    }
     
   }
   draw()
   {
-    fill(255, 0, 0);
-    //image(this.position.x, this.position.y, 10, -20);
     push();
+    // flips the enemies direction depending on which direction
+    // it is moving in
     if(this.direction != 0 )
     {
       this.idleFlip = this.direction;
     }
     translate(this.position.x,  this.position.y);
-    
     scale(this.idleFlip, 1);
-    if(this.pauseCycles == 0)
-    {
-      image(enemyWalkCycle[this.frameCount], -(0.75 * tileWidth), (0.15 * tileWidth), 2 * tileWidth, -1.25 * tileHeight);
-    }
-    else{
-      image(enemyIdleCycle[this.frameCount], -(0.75 * tileWidth), (0.15 * tileWidth), 2 * tileWidth, -1.25 * tileHeight);
-    }
-    //fill(255, 0, 0);
-    //square(0, 0, 5);
+    image(enemyWalkCycle[this.frameCount], -(0.75 * tileWidth), (0.15 * tileWidth), 2 * tileWidth, -1.25 * tileHeight);
     pop();
     if(this.health < 100)
     {
@@ -1109,6 +1164,7 @@ class enemyObj
       rect(this.position.x - (0.5 * tileWidth), this.position.y - (1.5 * tileWidth), floor((this.health * tileWidth) / 80), (0.25 * tileWidth));
       image(enemyHealthBar[0], this.position.x - (0.5 * tileWidth), this.position.y - (1.5 * tileWidth), 1.25 * tileWidth, 0.25 * tileHeight);
     }
+    // loops through the animation frames of the enemy object
     if(this.frameCount < 7)
     {
       this.frameCount++;
@@ -1120,38 +1176,49 @@ class enemyObj
   }
 }
 
+// enemy logic class
+// Inputs: Enemy x and y spawn position and the tilemap that spawned the enemy
 class enemyFlyingObj
 {
   constructor(x, y, tileMap)
   {
+    this.mapObj = tileMap;
+    this.mapPosition = tileMap.position;
     this.position = createVector(x, y);
     this.startPosition = createVector(x, y);
-    this.mapPosition = tileMap.position;
-    this.maxSpeed = 8;
+    
+    this.delete = false;
+    
+    this.state = "move";
+
+    this.shootInterval = floor(random(1, 5));
+    
     this.speed = 2;
     this.angle = 0;
     this.radius = 80;
-    this.angleRange = 45;
+    this.distance = 0;
+    this.maxSpeed = 8;
+    this.health = 100;
     this.direction = -1;
+    this.frameCount = 0;
+    this.angleRange = 45;
     this.returnAngle = 0; 
     this.pauseCycles = 0;
-    this.maxPauseCycles = 20;
-    this.distance = 0;
     this.maxDistance = 100;
-    this.state = "move";
-    this.shootInterval = floor(random(1, 5));
-    this.frameCount = 0;
-    this.health = 100;
-    this.delete = false;
-    this.mapObj = tileMap;
+    this.maxPauseCycles = 20;
   }
   update()
   {
+    // calculates the distance between the player and the enemy
+    // if the player is close enough we change states
     let distance = dist(this.position.x, this.position.y, player.position.x, player.position.y);
     if(distance > 10 * tileWidth)
     {
       this.state = "move";
     }
+    // if in the move state we move towards the target, if dodge we move away from the
+    // target, and if fire we fire at the target. Our target can change depending on
+    // the position of the player, bat and the bats start position.
     if(this.state === "move")
     {
       if(dist(player.position.x, player.position.y, this.startPosition.x, this.startPosition.y) > 20 * tileWidth)
@@ -1185,6 +1252,7 @@ class enemyFlyingObj
         
       }
     }
+    // removes the players bullet if it collides with the bat and decrements the bats health
     for (let i = playerBullets.length - 1; i >= 0; i--) {
       const playerBullet = playerBullets[i];
       if(dist(this.position.x, this.position.y, playerBullet.position.x, playerBullet.position.y) < (0.75 * tileWidth))
@@ -1197,6 +1265,7 @@ class enemyFlyingObj
       }
     }
   }
+  // moves towards the position right above the players head
   moveTowardsState(target)
   {
     let direction = createVector(target.x - this.position.x, target.y - this.position.y);
@@ -1216,6 +1285,7 @@ class enemyFlyingObj
       this.state = "dodge";
     }
   }
+  // moves away from the player to a position above the player
   dodgeState()
   {
     if (this.distance >= this.maxDistance) {
@@ -1245,10 +1315,12 @@ class enemyFlyingObj
     this.distance += this.direction;
 
   }
+  // fires a bullet at the player
   fire()
   {
     bullets.push(new bulletObj(this.position.x, this.position.y, createVector(player.position.x, player.position.y), color(200, 20, 25), 'bat'));
   }
+  // draws the bat animation cycle as well as its health bar
   draw()
   {
     fill(255, 0, 0);
@@ -1266,7 +1338,7 @@ class enemyFlyingObj
     fill(255, 0, 0);
     rect(this.position.x - (0.5 * tileWidth), this.position.y - tileHeight, floor((this.health * tileWidth) / tileWidth), 0.2 * tileWidth);
     image(enemyHealthBar[0], this.position.x - (0.5 * tileWidth), this.position.y - tileHeight, 1.25 * tileWidth, 0.25 * tileHeight);}
-
+    // loops throught the bats animation frames
     if(this.frameCount < 3)
     {
       this.frameCount += .5;
@@ -1277,71 +1349,71 @@ class enemyFlyingObj
     }
   }
 }
-
+// player logic class,
+// INPUTS:
+// x position and y position
 class playerObj
 {
   constructor(x, y)
   {
     this.position = createVector(x, y);
-    this.location = createVector(x, y);
     this.velocity = createVector();
     this.jumpForce = createVector(0, -0.20 * tileWidth);
-    this.coolDown = 5;
-    this.jumpCoolDown = 20;
-    this.maxSpeed = 0.5  * tileWidth;
+    
     this.fall;
-    this.grounded = true;
-    this.direction = 0;
-    this.hit = false;
-    this.frameCount = 0;
     this.previousPosition;
-    this.increment = 0.5;
+    
+    this.hit = false;
+    this.swim = false;
+    this.grounded = true;
     this.swiming = false;
-    this.roll = false;
+    this.doubleJump = false;
+    
     this.score = 0;
     this.health = 100;
-    this.hitCoolDown = 15;
-    this.doubleJump = true;
-    this.jumpCount = 0;
-    this.swim = true;
+    this.coolDown = 5;
     this.jumpCount = 2;
+    this.direction = 0;
+    this.frameCount = 0;
+    this.increment = 0.5;
+    this.hitCoolDown = 15;
+    this.jumpCoolDown = 20;
+    this.maxSpeed = 0.5  * tileWidth;
   }
+  // applies a force to the player object as long as
+  // the velocity applied is less that the max speed
+  // the player is allowed to travel
   jump(force) {
     this.velocity.add(force);
     this.velocity.limit(this.maxSpeed);
   }
   update()
   {
+    // adds the new velocity to the player position
     this.position.add(this.velocity);
     this.grounded = false;
+    // loops through each map to check which map the player is currently in
     for(let i = 0; i < maps.length; i++)
     {
       let x = this.position.x;
       let y = this.position.y;
       let mapX = maps[i].position.x;
       let mapY = maps[i].position.y;
+      // if the player is within the map we are currenly on we perform collision
+      // check on the tilemap the player is in
       if (
         x >= mapX && x <= mapX + mapSize - 1 &&
         y >= mapY && y <= mapY + mapSize
       ) {
         this.fall = false;
+        // variables for the players collision point to the left, right, up center.
         let tileXRight = floor((x - mapX + (0.55 * tileWidth)) / tileWidth);
         let tileXLeft = floor((x - mapX - (0.25 * tileWidth)) / tileWidth);
         let tileCenter = floor((x - mapX + (0.15 * tileWidth)) / tileWidth);
         let tileCenterHeight = floor((y - mapY - (0.05 * tileHeight)) / tileWidth);
-
-        if(keyIsDown(16) && !this.swiming)
-        {
-          if(millis() - timer > 500)
-          {
-            this.velocity.x += -this.direction * (0.5 * tileWidth);
-            gravity = createVector(0, 0);
-            this.coolDown = 30;
-            this.roll = true;
-            timer = millis();
-          }
-          
-        }
+        // if the right arrow is pressed or if D is pressed we check if the player is within
+        // the bounds of the current tilemap, if he is we perform a collision check below him.
+        // if he isnt but the area he is trying to move to is untiled we allow him to move right anyways.
         if ((keyIsDown(RIGHT_ARROW) || keyIsDown(68)) && this.coolDown === 0) {
           if(floor((y - (0.05 * tileHeight) - mapY) / tileWidth) >= 0)
           {
@@ -1357,9 +1429,13 @@ class playerObj
               this.position.x += 0.2 * tileWidth;
               this.coolDown = 2;
             }
+            // direction variable used to flip the player image
             this.direction = -1;
           }
         }
+        // if the left arrow is pressed or if D is pressed we check if the player is within
+        // the bounds of the current tilemap, if he is we perform a collision check below him.
+        // if he isnt but the area he is trying to move to is untiled we allow him to move left anyways.
         else if ((keyIsDown(LEFT_ARROW) || keyIsDown(65)) && this.coolDown === 0) {
           if(floor((y - (0.05 * tileHeight) - mapY) / tileWidth) >= 0)
           {
@@ -1375,19 +1451,25 @@ class playerObj
               this.position.x -= 0.2 * tileWidth;
               this.coolDown = 2;
             }
+            // direction variable used to flip the player image
             this.direction = 1;
           }
         }
+        // set the center value so we have no undefined variables
         let valueCenter = '~';
+        // if we are within the tilemap we check what the value of the tile the player is currently
+        // in.
         if(tileCenter > 0 && tileCenter < 50 && tileCenterHeight > 0 && tileCenterHeight < 50)
         {
           valueCenter = maps[i].mapData[tileCenter][floor((y - mapY - 1) / tileWidth)][0];
         }
+        // if the player is curerntly in a swim block and the player has unlocked the ability to swim
+        // we allow him to move up and down within the water, otherwise the player drowns.
         if(swimBlocks.includes(valueCenter))
         {
           if(this.swim == false)
           {
-            this.velocity.set(0, 0);dd
+            this.velocity.set(0, 0);
             this.health -= 0.1;
           }
           else
@@ -1412,29 +1494,34 @@ class playerObj
           gravity = createVector(0, 0.3);
           this.swiming = false;
         }
+        // variables for collision checks above and below the player
+        // as well as the players current x position.
         let tileY1 = floor((y - mapY + 1) / tileWidth);
-        // the 25 is the height of the player character, modify this later
         let tileY2 = floor((y - mapY - (1.5 * tileWidth)) / tileWidth);
         let tileX = floor((x - mapX) / tileWidth);
+        // checks if teh player is infornt of a ladder, if he is we allow him to move up and down
+        // ladders.
+        // we also check if the player is attempting to move up a ladder top which is not allowed
         if(ladderTiles.includes(valueCenter) || ladderTops.includes(valueCenter))
+        {
+          this.velocity.set(0, 0);
+          if(((keyIsDown(UP_ARROW) || keyIsDown(87)) && !ladderTops.includes(valueCenter)))
           {
-            this.velocity.set(0, 0);
-            if(((keyIsDown(UP_ARROW) || keyIsDown(87)) && !ladderTops.includes(valueCenter)))
-            {
-              this.velocity.y = 0;
-              this.position.y -= 0.15 * tileHeight;
-              this.coolDown = 20;
-              this.position.x = floor(x / tileWidth) * tileWidth + (0.2 * tileWidth);
-            }
-            else if(keyIsDown(DOWN_ARROW) || keyIsDown(83))
-            {
-              this.velocity.y = 0;
-              this.position.y += 0.15 * tileHeight;
-              this.coolDown = 20;
-              this.position.x = floor(x / tileWidth) * tileWidth + (0.2 * tileWidth);
-            }
+            this.velocity.y = 0;
+            this.position.y -= 0.15 * tileHeight;
+            this.coolDown = 20;
+            this.position.x = floor(x / tileWidth) * tileWidth + (0.2 * tileWidth);
           }
-      
+          else if(keyIsDown(DOWN_ARROW) || keyIsDown(83))
+          {
+            this.velocity.y = 0;
+            this.position.y += 0.15 * tileHeight;
+            this.coolDown = 20;
+            this.position.x = floor(x / tileWidth) * tileWidth + (0.2 * tileWidth);
+          }
+        }
+        // else we check if the position above and below the player is a tile
+        // if we collided and we reset the players velocity and apply gravity to it.
         else
         {
           if (tileY2 > 0 && tileY2 < 50 && tileX > 0 && tileX + 10 < 50) {
@@ -1451,7 +1538,7 @@ class playerObj
           }
           if (tileY1 > 0 && tileY1 < 50 && tileX >= 0 && tileX <= 50) {
             let value = maps[i].mapData[tileX][tileY1][0];
-            if (!backGroundTiles.includes(value)  /**&& value !== 't' && value !== 'y'**/) {
+            if (!backGroundTiles.includes(value)) {
               this.velocity.y = 0;
               this.position.y = tileY1 * tileWidth + ( maps[i].position.y - maps[0].position.y);
               this.grounded = true;
@@ -1461,6 +1548,8 @@ class playerObj
               this.fall = true;
             }
           }
+          // if the player is grounded and the jump button is clicked
+          // we allow the player to jump
           if (keyIsDown(32) && !this.hit) {
             if(this.grounded )
             {
@@ -1471,6 +1560,8 @@ class playerObj
                 this.jumpCount -= 1;
               }
             }
+            // if the player has unlocked the double jump we allow for a 
+            // second jump before the player must be grounded again to jump
             else if(this.doubleJump == true && this.jumpCount > 0)
             {
               if (this.jumpCoolDown === 0) {
@@ -1528,7 +1619,7 @@ class playerObj
       this.hit = false;
       this.hitCoolDown = 15;
     }
-    if(this.grounded && !this.roll)
+    if(this.grounded)
     {
       this.velocity.x = 0;
       this.hit = false;
@@ -1632,7 +1723,13 @@ class playerObj
     
   }
 }
-
+// boss bullet logic
+// INPUTS:
+// x ---- bullets x spawn location
+// y ---- bullets y spawn location
+// target ---- direction of the path the bullet will follow
+// color ---- the color of the bullet
+// shooter --- the object shooting the bullet
 class bossBulletObj
 {
   constructor(x, y, target, color)
@@ -1648,6 +1745,7 @@ class bossBulletObj
     this.timer = floor(random(10, 20));
     this.color = color;
   }
+  // moves the bullet in the path dictated by the input variables
   update()
   {
     this.velocity.set(cos(this.angle) * this.speed, sin(this.angle) * this.speed);
@@ -1657,6 +1755,7 @@ class bossBulletObj
     }
     this.position.add(this.velocity);
   }
+  // boss bullet art
   draw()
   {
     noStroke();
@@ -1676,6 +1775,13 @@ class bossBulletObj
   }
 }
 
+// bullet class that controls its movement logic
+// INPUTS:
+// x ---- bullets x spawn location
+// y ---- bullets y spawn location
+// target ---- direction of the path the bullet will follow
+// color ---- the color of the bullet
+// shooter --- the object shooting the bullet
 class bulletObj
 {
   constructor(x, y, target, color, shooter)
@@ -1695,6 +1801,8 @@ class bulletObj
   }
   update()
   {
+    // checks if the bullet has collided with anything, if it has the bullet
+    // falls downwards
     if(!this.fall)
     {
       this.velocity.set(cos(this.angle) * this.speed, sin(this.angle) * this.speed);
@@ -1735,15 +1843,19 @@ class bulletObj
     {
       this.velocity.set(0, 3);
     }
+    // if the bullets position is 800 pixels away for the player delete the object
     if(dist(this.position.x, this.position.y, player.position.x, player.position.y) > 800)
     {
       this.delete = true;
     }
     this.position.add(this.velocity);
+    // if the bullet is being shot by an enemy, perform a player hitcheck if it hits the player
     if(this.shooter === 'bat')
     {
       if(dist(this.position.x, this.position.y, player.position.x + this.size * 5, player.position.y - this.size * 5) < 20)
-      player.hitCheck(true);
+      {
+        player.hitCheck(true);
+      }
     }
   }
   draw()
@@ -1753,7 +1865,7 @@ class bulletObj
     square(this.position.x, this.position.y, this.size);
   }
 }
-
+// draws the crosshairs where the mouse is on the screen
 function CrossHairs()
 {
   if(!play)
@@ -1765,7 +1877,8 @@ function CrossHairs()
     image(crossHairs, (player.position.x + mouseX) - (tileWidth * 24), (player.position.y + mouseY) - (tileWidth * 14) - offset, 0.75 * tileWidth, 0.75 * tileHeight);
   }
 }
-
+// title screen that contains our instructions, our title image, as well as the animation
+// of the player moving their head
 function TitleScreen()
 {
   image(titleScreen, 8 * tileWidth, -8 * tileWidth, 40.5 * tileWidth, 20 * tileWidth);
@@ -1792,12 +1905,15 @@ function TitleScreen()
   startButton(InstructionButtons, 35.25 * tileWidth, -5 * tileWidth, 10 * tileWidth, 2 * tileWidth, 'instruction');
 }
 
+// end screen that allows us to restart the game
 function EndScreen()
 {
   image(GameOver, 24 * tileWidth, tileWidth, 8 * tileWidth, 8 * tileWidth);
   startButton(ReplayButtons, 25 * tileWidth, 10 * tileWidth, 6 * tileWidth, 2 * tileWidth, 'replay');
 }
 
+// creates a button that performs an action when clicked and changes color
+// when the mous hovers over it
 function startButton(icon, x, y, width, height, type)
 {
 
@@ -1845,20 +1961,19 @@ function draw() {
     CrossHairs();
   }
   else if(play){
-    if(start)
-    {
-      start = false;
-    }
+    // draws each animation every other frame
     if(frameCount % 2 === 0)
     {
-      
       background(23, 16, 34);
-      //dbackground(220);
+      // draws the tile map each time it is called
       mapDraw();
+      // draws all the mines
       for (let mine of mines)
       {
         mine.draw();
       }
+      // draws the particles made when the mines explode
+      // and when the boss dies
       for (var i=0; i<particles.length; i++) {
         if (particles[i].timeLeft > 0) {
           particles[i].draw();
@@ -1868,6 +1983,7 @@ function draw() {
           particles.splice(i, 1);
         }
       }
+      // draws each chest
       for(let chest of chests)
       {
         chest.draw();
@@ -1893,12 +2009,15 @@ function draw() {
       }
       
     }
+    // updates the players logic
     player.update();
+    // switches game states if the player loses all his health
     if(player.health < 0)
     {
       play = false;
       end = true;
     }
+    // draws and updates the enemy boss's logic
     if(boss01.health > 0)
     {boss01.update();}
     for (let i = bullets.length - 1; i >= 0; i--) {
@@ -1908,6 +2027,7 @@ function draw() {
         bullets.splice(i, 1);
       }
     }
+    // draws and updates the players bullet logic
     for (let i = playerBullets.length - 1; i >= 0; i--) {
       const playerBullet = playerBullets[i];
       playerBullet.update();
@@ -1915,6 +2035,8 @@ function draw() {
         playerBullets.splice(i, 1);
       }
     }
+    // draws the enemeies and removes the if they lose all their health
+    // also adds a coin when the enemy is killed.
     for(let i = 0; i < enemies.length; i++)
     {
       if(dist(enemies[i].position.x, enemies[i].position.y, player.position.x,player.position.y) < mapSize)
@@ -1928,6 +2050,7 @@ function draw() {
           }
         }
     }
+    // updates the logic and animations for coins
     for(let i = 0; i < coins.length; i++)
     {
       coins[i].update();
@@ -1937,6 +2060,7 @@ function draw() {
         coins.splice(i, 1); 
       }
     }
+    // updates the logic and animations for health packs
     for(let i = 0; i < healths.length; i++)
     {
       healths[i].update();
@@ -1946,8 +2070,12 @@ function draw() {
         healths.splice(i, 1); 
       }
     }
-    // Display Player Score
+
+    // we reset the Matrix so the transations we do that allows
+    // the map to move in the background does not move foreground
+    // objects like healthbars and score trackers
     resetMatrix();
+    // Display Player Score
     fill(200); 
     rect(35 * tileWidth, 0.5 * tileWidth, 6 * tileWidth, 1.5 * tileWidth);
     fill(100);
@@ -1993,7 +2121,8 @@ function draw() {
   }
 
   
-
+  // logic used to draw the bosses health on the screen when
+  // in the boss levels arena
   resetMatrix();
   fill(100);
   rect(0, 19.75 * tileWidth, 40 * tileWidth, 0.25 * tileWidth);
@@ -2006,14 +2135,16 @@ function draw() {
   }
   
 }
+// camera logic that smoothly follows the player around the world
 function updateCamera()
 {
   camX = width / 2 - player.position.x;
   camY = lerp(camY, height / 2 - player.position.y, 0.05);
   translate(camX, camY);
-  
-  
 }
+// draws each tile on the map if the player is close enough to the
+// maps spawn location for it to be drawn. All map objects are in a maps
+// array that we cycle through and check if they are close enough
 function mapDraw()
 {
   for(let mapObj of maps)
@@ -2025,6 +2156,7 @@ function mapDraw()
       {
         for(let j = 0; j < 50; j++)
         {
+          // adds mines to the chains under water
           if(selection[mapObj.mapData[i][j][0]]) {
             if(mapObj.mapData[i][j][0] === '+')
             {
@@ -2044,6 +2176,8 @@ function mapDraw()
             push();
             translate(tileCenterX, tileCenterY);
             rotate(radians(tileAngle * mapObj.mapData[i][j][1]));
+            // rotates the tile if their rotation value in their map JSON
+            // dictate4s that they need to be rotated
             if(mapObj.mapData[i][j][1] < 0)
               {
                 scale(-1, 1);
@@ -2051,6 +2185,8 @@ function mapDraw()
             image(selection[mapObj.mapData[i][j][0]], -tileWidth / 2, -tileWidth / 2 , tileWidth, tileHeight);
             pop();
           }
+          // draws each object enemy objects and removes them from the map so we dont
+          // keep drawing them every frame
           else if(mapObj.mapData[i][j][0] === '|')
           {
             enemies.push(new enemyFlyingObj(mapObj.position.x + (i * tileWidth), mapObj.position.y + (j * tileHeight), mapObj));
@@ -2087,9 +2223,12 @@ function mapDraw()
   }
 }
 
+
+// creates a hitbox where ever the function is called
+// works similarly to p5's rect() function but performs
+// hitboxes and is invisible
 function hitBox(x1, y1, width, height)
 {
-  //square(x1, y1, width, height);
   if(player.position.x >= x1 && player.position.x <= x1 + width)
   {
     if(player.position.y >= y1 && player.position.y <= y1 + height)
